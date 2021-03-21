@@ -31,7 +31,7 @@ func InjectEnvironment(logger hclog.Logger, mmdsData *mmds.MMDSData, envFile str
 	}
 	if !dirExists {
 		logger.Debug("creating env file parent directory", "env-file", envFile)
-		if err := os.Mkdir(filepath.Dir(envFile), 0755); err != nil { // the default permission for this directory
+		if err := os.MkdirAll(filepath.Dir(envFile), 0755); err != nil { // the default permission for this directory
 			return errors.Wrap(err, "failed creating parent env directory")
 		}
 	}
