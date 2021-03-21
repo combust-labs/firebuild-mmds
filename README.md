@@ -83,4 +83,16 @@ sudo vminit
   - if `latest/meta-data/network/interfaces` contains interfaces and `latest/meta-data/local-hostname` is not empty, adds an mapping entry for the interface IP address + hostname such that the VM can resolve its own hostname
 - if `latest/meta-data/users` contains user definitions, writes SSH authorized keys files for each respective user
 
+## cutting releases
 
+```sh
+make release
+```
+
+This will create a release on GitHub.
+
+```sh
+make build-vmlinux
+```
+
+Upload the resulting binary artifact to the release.
