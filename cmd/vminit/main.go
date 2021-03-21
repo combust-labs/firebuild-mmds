@@ -25,6 +25,15 @@ var defaultHosts = map[string]string{
 	"ff02::2":   "ip6-allrouters",
 }
 
+const (
+	defaultGuestMMDSIP                   = "169.254.169.254"
+	defaultMetadataPath                  = "latest/meta-data"
+	defaultPathAuthorizedKeysPatternFile = "/home/%s/.ssh/authorized_keys"
+	defaultPathEnvFile                   = "/etc/profile.d/run-env.sh"
+	defaultPathHostnameFile              = "/etc/hostname"
+	defaultPathHostsFile                 = "/etc/hosts"
+)
+
 var rootCmd = &cobra.Command{
 	Use:   "vminit",
 	Short: "vminit",
@@ -35,6 +44,11 @@ var rootCmd = &cobra.Command{
 type commandConfig struct {
 	MMDSIP       string
 	MetadataPath string
+
+	PathAuthorizedKeysPatternFile string
+	PathEnvFile                   string
+	PathHostnameFile              string
+	PathHostsFile                 string
 }
 
 var (
@@ -43,8 +57,14 @@ var (
 )
 
 func initFlags() {
-	rootCmd.Flags().StringVar(&config.MMDSIP, "guest-mmds-ip", "169.254.169.254", "Guest IP address of the MMDS service")
-	rootCmd.Flags().StringVar(&config.MetadataPath, "metadata-path", "latest/meta-data", "Path to the metadata root")
+	rootCmd.Flags().StringVar(&config.MMDSIP, "guest-mmds-ip", defaultGuestMMDSIP, "Guest IP address of the MMDS service")
+	rootCmd.Flags().StringVar(&config.MetadataPath, "metadata-path", defaultMetadataPath, "Path to the metadata root")
+
+	rootCmd.Flags().StringVar(&config.PathAuthorizedKeysPatternFile, "path-authorized-keys-pattern", defaultPathAuthorizedKeysPatternFile, "Path to the metadata root")
+	rootCmd.Flags().StringVar(&config.PathEnvFile, "path-env-file", defaultPathEnvFile, "Path to the metadata root")
+	rootCmd.Flags().StringVar(&config.PathHostnameFile, "path-hostname-file", defaultPathHostnameFile, "Path to the metadata root")
+	rootCmd.Flags().StringVar(&config.PathHostsFile, "path-hosts-file", defaultPathHostsFile, "Path to the metadata root")
+
 	rootCmd.Flags().AddFlagSet(logCfg.FlagSet())
 }
 
@@ -60,45 +80,54 @@ func processCommand() int {
 
 	rootLogger := logCfg.NewLogger("vminit")
 
-	httpRequest, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://%s/%s", config.MMDSIP, config.MetadataPath), nil)
+	mmdsData, err := fetchMMDSMetadata(rootLogger)
 	if err != nil {
-		rootLogger.Error("error when creating a http request", "reason", err.Error())
-		return 1
-	}
-	httpRequest.Header.Add("accept", "application/json")
-	httpResponse, err := http.DefaultClient.Do(httpRequest)
-	if err != nil {
-		rootLogger.Error("error executing MMDS request", "reason", err.Error())
-		return 1
-	}
-	defer httpResponse.Body.Close()
-	mmdsData := &mmds.MMDSData{}
-	if err := json.NewDecoder(httpResponse.Body).Decode(mmdsData); err != nil {
-		rootLogger.Error("error deserializing MMDS data", "reason", err.Error())
+		// already logged
 		return 1
 	}
 
-	if err := injectEnvironment(rootLogger, mmdsData, "/etc/profile.d/run-env.sh"); err != nil {
-		rootLogger.Error("error injecting environment from MMDS data", "reason", err.Error())
-		return 1
-	}
-
-	if err := injectHostname(rootLogger, mmdsData); err != nil {
-		rootLogger.Error("error injecting local hostname from MMDS data", "reason", err.Error())
-		return 1
-	}
-
-	if err := injectHosts(rootLogger, mmdsData); err != nil {
-		rootLogger.Error("error injecting hosts from MMDS data", "reason", err.Error())
-		return 1
-	}
-
-	if err := injectSSHKeys(rootLogger, mmdsData); err != nil {
+	if err := injectSSHKeys(rootLogger, mmdsData, config.PathAuthorizedKeysPatternFile); err != nil {
 		rootLogger.Error("error injecting ssh keys from MMDS data", "reason", err.Error())
 		return 1
 	}
 
+	if err := injectEnvironment(rootLogger, mmdsData, config.PathEnvFile); err != nil {
+		rootLogger.Error("error injecting environment from MMDS data", "reason", err.Error())
+		return 1
+	}
+
+	if err := injectHostname(rootLogger, mmdsData, config.PathHostnameFile); err != nil {
+		rootLogger.Error("error injecting local hostname from MMDS data", "reason", err.Error())
+		return 1
+	}
+
+	if err := injectHosts(rootLogger, mmdsData, config.PathHostsFile); err != nil {
+		rootLogger.Error("error injecting hosts from MMDS data", "reason", err.Error())
+		return 1
+	}
+
 	return 0
+}
+
+func fetchMMDSMetadata(logger hclog.Logger) (*mmds.MMDSData, error) {
+	httpRequest, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://%s/%s", config.MMDSIP, config.MetadataPath), nil)
+	if err != nil {
+		logger.Error("error when creating a http request", "reason", err.Error())
+		return nil, err
+	}
+	httpRequest.Header.Add("accept", "application/json")
+	httpResponse, err := http.DefaultClient.Do(httpRequest)
+	if err != nil {
+		logger.Error("error executing MMDS request", "reason", err.Error())
+		return nil, err
+	}
+	defer httpResponse.Body.Close()
+	mmdsData := &mmds.MMDSData{}
+	if err := json.NewDecoder(httpResponse.Body).Decode(mmdsData); err != nil {
+		logger.Error("error deserializing MMDS data", "reason", err.Error())
+		return nil, err
+	}
+	return mmdsData, nil
 }
 
 func injectEnvironment(logger hclog.Logger, mmdsData *mmds.MMDSData, envFile string) error {
@@ -149,14 +178,12 @@ func injectEnvironment(logger hclog.Logger, mmdsData *mmds.MMDSData, envFile str
 	return nil
 }
 
-func injectHostname(logger hclog.Logger, mmdsData *mmds.MMDSData) error {
+func injectHostname(logger hclog.Logger, mmdsData *mmds.MMDSData, etcHostnameFile string) error {
 
 	if len(mmdsData.LocalHostname) == 0 {
 		logger.Debug("no local hostname, nothing to do")
 		return nil // nothing to do
 	}
-
-	etcHostnameFile := "/etc/hostname"
 
 	sourceStat, err := checkIfExistsAndIsRegular(etcHostnameFile)
 	if err != nil {
@@ -206,9 +233,7 @@ func injectHostname(logger hclog.Logger, mmdsData *mmds.MMDSData) error {
 	return nil
 }
 
-func injectHosts(logger hclog.Logger, mmdsData *mmds.MMDSData) error {
-
-	etcHostsFile := "/etc/hosts"
+func injectHosts(logger hclog.Logger, mmdsData *mmds.MMDSData, etcHostsFile string) error {
 
 	hosts := map[string]string{}
 	for k, v := range defaultHosts {
@@ -284,7 +309,7 @@ func injectHosts(logger hclog.Logger, mmdsData *mmds.MMDSData) error {
 	return nil
 }
 
-func injectSSHKeys(logger hclog.Logger, mmdsData *mmds.MMDSData) error {
+func injectSSHKeys(logger hclog.Logger, mmdsData *mmds.MMDSData, authKeysFullPathPattern string) error {
 
 	if len(mmdsData.Users) == 0 {
 		logger.Debug("no users, nothing to do")
@@ -293,7 +318,7 @@ func injectSSHKeys(logger hclog.Logger, mmdsData *mmds.MMDSData) error {
 
 	for username, userinfo := range mmdsData.Users {
 
-		authKeysFullPath := fmt.Sprintf("/home/%s/.ssh/authorized_keys", username)
+		authKeysFullPath := fmt.Sprintf(authKeysFullPathPattern, username)
 
 		logger.Debug("authorized_keys file to use", "path", authKeysFullPath)
 		logger.Debug("checking the authorized_keys file")
