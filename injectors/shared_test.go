@@ -282,8 +282,9 @@ func TestInjectEntrypoint(t *testing.T) {
 	}
 
 	file := filepath.Join(tempDir, "usr/bin/firebuild-entrypoint.sh")
+	envFile := filepath.Join(tempDir, "etc/profile.d/env.file")
 
-	if err := InjectEntrypoint(hclog.Default(), newMMDSData, file); err != nil {
+	if err := InjectEntrypoint(hclog.Default(), newMMDSData, file, envFile); err != nil {
 		t.Fatal("expected the entrypoint runner to be injected but received an error:", err)
 	}
 
@@ -292,7 +293,10 @@ func TestInjectEntrypoint(t *testing.T) {
 		t.Fatal("expected the hosts file to be read but received an error:", err)
 	}
 
-	if string(fileBytes) != "#!/bin/sh\n\n/bin/sh -c 'ETCD_VERSION=\"3.4.0\"; cd / && /usr/bin/start.sh \"--help\"'\n" {
+	expectedString := fmt.Sprintf("#!/bin/sh\n\n/bin/sh -c 'export ETCD_VERSION=\"3.4.0\"; if [ -f \"%s\" ]; then . \"%s\"; fi; cd / && /usr/bin/start.sh \"--help\"'\n",
+		envFile, envFile)
+
+	if string(fileBytes) != expectedString {
 		t.Fatal("usr/bin/firebuild-entrypoint.sh did not contain required content")
 	}
 }

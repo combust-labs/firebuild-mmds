@@ -101,22 +101,22 @@ func (inst *MMDSRootfsEntrypointInfo) ToJsonString() (string, error) {
 // ToShellCommand returns two strings representing a shell in which the command must be executed and a command itself.
 // The final execution of the command should be done in the following way:
 //   shell 'actual-command'
-func (inst *MMDSRootfsEntrypointInfo) ToShellCommand() (string, string) {
+func (inst *MMDSRootfsEntrypointInfo) ToShellCommand() (string, string, string) {
 	// We're running the commands by wrapping the command in the shell call so sshSession.Setenv might not do what we intend.
 	// Also, we don't really know which shell are we running because it comes as an argument to us
 	// so we can't, for example, assume bourne shell -a...
 	envString := ""
 	for k, v := range inst.Env {
-		envString = fmt.Sprintf("%s%s=\"%s\"; ", envString, k, v)
+		envString = fmt.Sprintf("export %s%s=\"%s\"; ", envString, k, v)
 	}
-	commandString := fmt.Sprintf("%scd %s && ", envString, inst.Workdir)
+	commandString := fmt.Sprintf("cd %s && ", inst.Workdir)
 	commandString = fmt.Sprintf("%s%s ", commandString, strings.Join(inst.Entrypoint, " "))
 	for _, c := range inst.Cmd {
 		commandString = fmt.Sprintf("%s\"%s\"", commandString, c)
 	}
 	commandString = strings.ReplaceAll(commandString, "'", "'\\''")
 	if len(inst.Shell) > 0 {
-		return strings.Join(inst.Shell, " "), commandString
+		return strings.Join(inst.Shell, " "), envString, commandString
 	}
-	return "/bin/sh -c", commandString
+	return "/bin/sh -c", envString, commandString
 }

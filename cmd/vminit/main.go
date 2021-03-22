@@ -118,7 +118,7 @@ func processCommand() int {
 		return 1
 	}
 
-	if err := injectors.InjectEntrypoint(rootLogger, mmdsData, config.PathEntrypointRunnerFile); err != nil {
+	if err := injectors.InjectEntrypoint(rootLogger, mmdsData, config.PathEntrypointRunnerFile, config.PathEnvFile); err != nil {
 		rootLogger.Error("error injecting hosts from MMDS data", "reason", err.Error())
 		return 1
 	}

@@ -11,7 +11,7 @@ import (
 )
 
 // InjectEnvironment injects an environment into an /etc/profile.d/... file.
-func InjectEntrypoint(logger hclog.Logger, mmdsData *mmds.MMDSData, entrypointRunnerPath string) error {
+func InjectEntrypoint(logger hclog.Logger, mmdsData *mmds.MMDSData, entrypointRunnerPath, envFile string) error {
 
 	entrypointInfo, jsonErr := mmds.NewMMDSRootfsEntrypointInfoFromJSON(mmdsData.EntrypointJSON)
 	if jsonErr != nil {
@@ -45,8 +45,8 @@ func InjectEntrypoint(logger hclog.Logger, mmdsData *mmds.MMDSData, entrypointRu
 		return errors.Wrap(openErr, "failed opening entrypoint runner file for writing")
 	}
 	defer writableFile.Close()
-	shell, command := entrypointInfo.ToShellCommand()
-	stringToWrite := fmt.Sprintf("#!/bin/sh\n\n%s '%s'\n", shell, command)
+	shell, env, command := entrypointInfo.ToShellCommand()
+	stringToWrite := fmt.Sprintf("#!/bin/sh\n\n%s '%sif [ -f \"%s\" ]; then . \"%s\"; fi; %s'\n", shell, env, envFile, envFile, command)
 
 	written, writeErr := writableFile.WriteString(stringToWrite)
 	if err != nil {
