@@ -23,6 +23,7 @@ const (
 	defaultGuestMMDSIP                   = "169.254.169.254"
 	defaultMetadataPath                  = "latest/meta-data"
 	defaultPathAuthorizedKeysPatternFile = "/home/%s/.ssh/authorized_keys"
+	defaultPathEntrypointRunnerFile      = "/usr/bin/firebuild-entrypoint.sh"
 	defaultPathEnvFile                   = "/etc/profile.d/run-env.sh"
 	defaultPathHostnameFile              = "/etc/hostname"
 	defaultPathHostsFile                 = "/etc/hosts"
@@ -40,9 +41,12 @@ type commandConfig struct {
 	MetadataPath string
 
 	PathAuthorizedKeysPatternFile string
+	PathEntrypointRunnerFile      string
 	PathEnvFile                   string
 	PathHostnameFile              string
 	PathHostsFile                 string
+
+	PrintFlags bool
 }
 
 var (
@@ -55,9 +59,12 @@ func initFlags() {
 	rootCmd.Flags().StringVar(&config.MetadataPath, "metadata-path", defaultMetadataPath, "Path to the metadata root")
 
 	rootCmd.Flags().StringVar(&config.PathAuthorizedKeysPatternFile, "path-authorized-keys-pattern", defaultPathAuthorizedKeysPatternFile, "Path to the metadata root")
+	rootCmd.Flags().StringVar(&config.PathEntrypointRunnerFile, "path-entrypoint-runner-file", defaultPathEntrypointRunnerFile, "Path to the entrypoint runner executable")
 	rootCmd.Flags().StringVar(&config.PathEnvFile, "path-env-file", defaultPathEnvFile, "Path to the metadata root")
 	rootCmd.Flags().StringVar(&config.PathHostnameFile, "path-hostname-file", defaultPathHostnameFile, "Path to the metadata root")
 	rootCmd.Flags().StringVar(&config.PathHostsFile, "path-hosts-file", defaultPathHostsFile, "Path to the metadata root")
+
+	rootCmd.Flags().BoolVar(&config.PrintFlags, "print-flags", false, "If set, prints the flag per line only in the format '--flag value' (unquoted); useful for fetching configuration defaults")
 
 	rootCmd.Flags().AddFlagSet(logCfg.FlagSet())
 }
@@ -71,6 +78,17 @@ func run(cobraCommand *cobra.Command, _ []string) {
 }
 
 func processCommand() int {
+
+	if config.PrintFlags {
+		fmt.Println("--guest-mmds-ip " + config.MMDSIP)
+		fmt.Println("--metadata-path " + config.MetadataPath)
+		fmt.Println("--path-authorized-keys-pattern " + config.PathAuthorizedKeysPatternFile)
+		fmt.Println("--path-entrypoint-runner-file " + config.PathEntrypointRunnerFile)
+		fmt.Println("--path-env-file " + config.PathEnvFile)
+		fmt.Println("--path-hostname-file " + config.PathHostnameFile)
+		fmt.Println("--path-hosts-file " + config.PathHostsFile)
+		return 0
+	}
 
 	rootLogger := logCfg.NewLogger("vminit")
 
@@ -96,6 +114,11 @@ func processCommand() int {
 	}
 
 	if err := injectors.InjectHosts(rootLogger, mmdsData, defaultHosts, config.PathHostsFile); err != nil {
+		rootLogger.Error("error injecting hosts from MMDS data", "reason", err.Error())
+		return 1
+	}
+
+	if err := injectors.InjectEntrypoint(rootLogger, mmdsData, config.PathEntrypointRunnerFile); err != nil {
 		rootLogger.Error("error injecting hosts from MMDS data", "reason", err.Error())
 		return 1
 	}

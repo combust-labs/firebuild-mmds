@@ -220,8 +220,6 @@ func TestInjectSSHKeys(t *testing.T) {
 		t.Fatal("expected fetch to succeed but received an error:", err)
 	}
 
-	mmdsData.Network.Interfaces = map[string]*mmds.MMDSNetworkInterface{}
-
 	// the file must exist before writing and we require specific permissions:
 	if err := os.MkdirAll(filepath.Join(tempDir, "home/alpine/.ssh"), 0700); err != nil {
 		t.Fatal("expected home/alpine/.ssh directory to be created:", err)
@@ -263,6 +261,38 @@ func TestInjectSSHKeys(t *testing.T) {
 	}
 }
 
+func TestInjectEntrypoint(t *testing.T) {
+	tempDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatal("expected temp directory:", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	mdPath := "latest/meta-data"
+	server := httptest.NewServer(newTestServer(mdPath))
+	defer server.Close()
+
+	mmdsData, err := mmds.GuestFetchMMDSMetadata(hclog.Default(), fmt.Sprintf("%s/%s", server.URL, mdPath))
+	if err != nil {
+		t.Fatal("expected fetch to succeed but received an error:", err)
+	}
+
+	file := filepath.Join(tempDir, "usr/bin/firebuild-entrypoint.sh")
+
+	if err := InjectEntrypoint(hclog.Default(), mmdsData, file); err != nil {
+		t.Fatal("expected the entrypoint runner to be injected but received an error:", err)
+	}
+
+	fileBytes, err := ioutil.ReadFile(file)
+	if err != nil {
+		t.Fatal("expected the hosts file to be read but received an error:", err)
+	}
+
+	if string(fileBytes) != "#!/bin/sh\n\n/bin/sh -c 'ETCD_VERSION=\"3.4.0\"; cd / && /usr/bin/start.sh \"--help\"'\n" {
+		t.Fatal("usr/bin/firebuild-entrypoint.sh did not contain required content")
+	}
+}
+
 const testJsonData = `{
 	"drives":{
 	   "1":{
@@ -273,6 +303,7 @@ const testJsonData = `{
 		  "path-on-host":"rootfs"
 	   }
 	},
+	"entrypoint-json": "{\"cmd\": [\"--help\"], \"entrypoint\": [\"/usr/bin/start.sh\"], \"env\": {\"ETCD_VERSION\": \"3.4.0\"}, \"shell\": [\"/bin/sh\", \"-c\"], \"user\": \"0:0\", \"workdir\": \"/\"}",
 	"env":{
 		"ENV_VAR": "a value"
 	},
