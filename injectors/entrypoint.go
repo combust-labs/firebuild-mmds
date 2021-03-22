@@ -24,11 +24,6 @@ func InjectEntrypoint(logger hclog.Logger, mmdsData *mmds.MMDSData, entrypointRu
 		return nil // nothing to do
 	}
 
-	if len(mmdsData.Env) == 0 {
-		logger.Debug("env empty, nothing to do")
-		return nil // nothing to do
-	}
-
 	// make sure a parent directory exists:
 	dirExists, err := pathExists(filepath.Dir(entrypointRunnerPath))
 	if err != nil {

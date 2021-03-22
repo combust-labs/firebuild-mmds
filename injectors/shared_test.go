@@ -277,9 +277,13 @@ func TestInjectEntrypoint(t *testing.T) {
 		t.Fatal("expected fetch to succeed but received an error:", err)
 	}
 
+	newMMDSData := &mmds.MMDSData{
+		EntrypointJSON: mmdsData.EntrypointJSON,
+	}
+
 	file := filepath.Join(tempDir, "usr/bin/firebuild-entrypoint.sh")
 
-	if err := InjectEntrypoint(hclog.Default(), mmdsData, file); err != nil {
+	if err := InjectEntrypoint(hclog.Default(), newMMDSData, file); err != nil {
 		t.Fatal("expected the entrypoint runner to be injected but received an error:", err)
 	}
 
