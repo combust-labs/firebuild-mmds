@@ -1,5 +1,6 @@
 VERSION_FILE := .version
 VERSION      := $(shell cat ${VERSION_FILE})
+LATEST_RELEASE := $(shell git tag -l | tail -1)
 
 build-vminit:
 	GOOS=linux CGO_ENABLED=0 installsuffix=cgo go build -o ./vminit-linux-amd64-${VERSION} ./cmd/vminit/main.go
@@ -13,4 +14,4 @@ release:
 	rm -rf /tmp/git-release
 
 build-from-latest-tag:
-	cd ${GOPATH}/src/github.com/combust-labs/firebuild-mmds && git checkout $(git tag -l | tail -1) && make build-vminit && git checkout master
+	cd ${GOPATH}/src/github.com/combust-labs/firebuild-mmds && git checkout $(LATEST_RELEASE) && make build-vminit && git checkout master
