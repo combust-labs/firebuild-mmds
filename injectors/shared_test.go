@@ -293,7 +293,7 @@ func TestInjectEntrypoint(t *testing.T) {
 		t.Fatal("expected the hosts file to be read but received an error:", err)
 	}
 
-	expectedString := fmt.Sprintf("#!/bin/sh\n\n/bin/sh -c 'export ETCD_VERSION=\"3.4.0\"; if [ -f \"%s\" ]; then . \"%s\"; fi; cd / && /usr/bin/start.sh \"--help\"'\n",
+	expectedString := fmt.Sprintf("#!/bin/sh\n\n/bin/sh -c 'export ETCD_VERSION=\"3.4.0\"; if [ -f \"%s\" ]; then . \"%s\"; fi; export PATH=$PATH:/; cd / && /usr/bin/start.sh \"--help\"'\n",
 		envFile, envFile)
 
 	if string(fileBytes) != expectedString {

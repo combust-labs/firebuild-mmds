@@ -107,9 +107,9 @@ func (inst *MMDSRootfsEntrypointInfo) ToShellCommand() (string, string, string) 
 	// so we can't, for example, assume bourne shell -a...
 	envString := ""
 	for k, v := range inst.Env {
-		envString = fmt.Sprintf("export %s%s=\"%s\"; ", envString, k, v)
+		envString = fmt.Sprintf("%sexport %s=\"%s\"; ", envString, k, v)
 	}
-	commandString := fmt.Sprintf("cd %s && ", inst.Workdir)
+	commandString := fmt.Sprintf("export PATH=$PATH:%s; cd %s && ", inst.Workdir, inst.Workdir)
 	commandString = fmt.Sprintf("%s%s ", commandString, strings.Join(inst.Entrypoint, " "))
 	for _, c := range inst.Cmd {
 		commandString = fmt.Sprintf("%s\"%s\"", commandString, c)
