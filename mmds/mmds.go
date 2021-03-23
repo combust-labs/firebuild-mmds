@@ -110,9 +110,9 @@ func (inst *MMDSRootfsEntrypointInfo) ToShellCommand() (string, string, string) 
 		envString = fmt.Sprintf("%sexport %s=\"%s\"; ", envString, k, v)
 	}
 	commandString := fmt.Sprintf("export PATH=$PATH:%s; cd %s && ", inst.Workdir, inst.Workdir)
-	commandString = fmt.Sprintf("%s%s ", commandString, strings.Join(inst.Entrypoint, " "))
+	commandString = fmt.Sprintf("%s%s", commandString, strings.Join(inst.Entrypoint, " "))
 	for _, c := range inst.Cmd {
-		commandString = fmt.Sprintf("%s\"%s\"", commandString, c)
+		commandString = fmt.Sprintf("%s \"%s\"", commandString, c)
 	}
 	commandString = strings.ReplaceAll(commandString, "'", "'\\''")
 	if len(inst.Shell) > 0 {

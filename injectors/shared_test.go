@@ -293,7 +293,7 @@ func TestInjectEntrypoint(t *testing.T) {
 		t.Fatal("expected the hosts file to be read but received an error:", err)
 	}
 
-	expectedString := fmt.Sprintf("#!/bin/sh\n\n/bin/sh -c 'export ETCD_VERSION=\"3.4.0\"; if [ -f \"%s\" ]; then . \"%s\"; fi; export PATH=$PATH:/; cd / && /usr/bin/start.sh \"--help\"'\n",
+	expectedString := fmt.Sprintf("#!/bin/sh\n\n/bin/sh -c 'export ETCD_VERSION=\"3.4.0\"; if [ -f \"%s\" ]; then . \"%s\"; fi; export PATH=$PATH:/; cd / && /usr/bin/start.sh \"--help\" \"--another\"'\n",
 		envFile, envFile)
 
 	if string(fileBytes) != expectedString {
@@ -311,7 +311,7 @@ const testJsonData = `{
 		  "path-on-host":"rootfs"
 	   }
 	},
-	"entrypoint-json": "{\"cmd\": [\"--help\"], \"entrypoint\": [\"/usr/bin/start.sh\"], \"env\": {\"ETCD_VERSION\": \"3.4.0\"}, \"shell\": [\"/bin/sh\", \"-c\"], \"user\": \"0:0\", \"workdir\": \"/\"}",
+	"entrypoint-json": "{\"cmd\": [\"--help\", \"--another\"], \"entrypoint\": [\"/usr/bin/start.sh\"], \"env\": {\"ETCD_VERSION\": \"3.4.0\"}, \"shell\": [\"/bin/sh\", \"-c\"], \"user\": \"0:0\", \"workdir\": \"/\"}",
 	"env":{
 		"ENV_VAR": "a value"
 	},
