@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/combust-labs/firebuild-mmds/bootstrap"
 	"github.com/combust-labs/firebuild-mmds/configs"
 	"github.com/combust-labs/firebuild-mmds/injectors"
 	"github.com/combust-labs/firebuild-mmds/mmds"
@@ -98,29 +99,38 @@ func processCommand() int {
 		return 1
 	}
 
+	if mmdsData.Bootstrap != nil {
+		// server is in the bootstrap mode:
+		if err := bootstrap.DoBootstrap(rootLogger.Named("bootstrap"), mmdsData.Bootstrap); err != nil {
+			rootLogger.Error("bootstrap failed", "reason", err)
+			return 2
+		}
+		return 0
+	}
+
 	if err := injectors.InjectSSHKeys(rootLogger, mmdsData, config.PathAuthorizedKeysPatternFile); err != nil {
 		rootLogger.Error("error injecting ssh keys from MMDS data", "reason", err.Error())
-		return 1
+		return 3
 	}
 
 	if err := injectors.InjectEnvironment(rootLogger, mmdsData, config.PathEnvFile); err != nil {
 		rootLogger.Error("error injecting environment from MMDS data", "reason", err.Error())
-		return 1
+		return 3
 	}
 
 	if err := injectors.InjectHostname(rootLogger, mmdsData, config.PathHostnameFile); err != nil {
 		rootLogger.Error("error injecting local hostname from MMDS data", "reason", err.Error())
-		return 1
+		return 3
 	}
 
 	if err := injectors.InjectHosts(rootLogger, mmdsData, defaultHosts, config.PathHostsFile); err != nil {
 		rootLogger.Error("error injecting hosts from MMDS data", "reason", err.Error())
-		return 1
+		return 3
 	}
 
 	if err := injectors.InjectEntrypoint(rootLogger, mmdsData, config.PathEntrypointRunnerFile, config.PathEnvFile); err != nil {
 		rootLogger.Error("error injecting hosts from MMDS data", "reason", err.Error())
-		return 1
+		return 3
 	}
 
 	return 0
