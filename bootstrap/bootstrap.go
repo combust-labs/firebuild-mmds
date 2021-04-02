@@ -13,32 +13,55 @@ import (
 	"github.com/pkg/errors"
 )
 
+type Bootstrapper interface {
+	Execute() error
+	WithCommandRunner(CommandRunner) Bootstrapper
+	WithResourceDeployer(ResourceDeployer) Bootstrapper
+}
+
+type defaultBootstrapper struct {
+	commandRunner    CommandRunner
+	bootstrapData    *mmds.MMDSBootstrap
+	logger           hclog.Logger
+	resourceDeployer ResourceDeployer
+}
+
+func NewDefaultBoostrapper(logger hclog.Logger, bootstrapData *mmds.MMDSBootstrap) Bootstrapper {
+	return &defaultBootstrapper{
+		commandRunner:    &noopCommandRunner{logger: logger.Named("noop-runner")},
+		bootstrapData:    bootstrapData,
+		logger:           logger,
+		resourceDeployer: &noopResourceDeployer{logger: logger.Named("noo-deployer")},
+	}
+}
+
 // DoBootstrap executes the bootstrap sequence on the machine.
-func DoBootstrap(logger hclog.Logger, bootstrapData *mmds.MMDSBootstrap) error {
-	clientTLSConfig, err := getTLSConfig(bootstrapData)
+func (b *defaultBootstrapper) Execute() error {
+	clientTLSConfig, err := getTLSConfig(b.bootstrapData)
 	if err != nil {
-		logger.Error("failed creating client TLS config", "reason", err)
+		b.logger.Error("failed creating client TLS config", "reason", err)
 		return err
 	}
 
 	clientConfig := &rootfs.GRPCClientConfig{
-		HostPort:       bootstrapData.HostPort,
+		HostPort:       b.bootstrapData.HostPort,
 		TLSConfig:      clientTLSConfig,
 		MaxRecvMsgSize: rootfs.DefaultMaxRecvMsgSize,
 	}
 
-	client, err := rootfs.NewClient(logger.Named("grpc-client"), clientConfig)
+	client, err := rootfs.NewClient(b.logger.Named("grpc-client"), clientConfig)
 	if err != nil {
-		logger.Error("failed constructing gRPC client", "reason", err)
+		b.logger.Error("failed constructing gRPC client", "reason", err)
 		return err
 	}
 
 	if err := client.Commands(); err != nil {
-		logger.Error("failed fetching bootstrap commands over gRPC", "reason", err)
+		b.logger.Error("failed fetching bootstrap commands over gRPC", "reason", err)
 		return err
 	}
 
 	for {
+
 		serializableCommand := client.NextCommand()
 		if serializableCommand == nil {
 			break // finished
@@ -46,17 +69,39 @@ func DoBootstrap(logger hclog.Logger, bootstrapData *mmds.MMDSBootstrap) error {
 
 		switch vCommand := serializableCommand.(type) {
 		case commands.Run:
-			logger.Info("RUN command", "paylod", vCommand)
+			if err := b.commandRunner.Execute(vCommand, client); err != nil {
+				b.logger.Error("bootstrap failed, executing RUN command failed", "reason", err)
+				client.Abort(err)
+				return err
+			}
 		case commands.Add:
-			logger.Info("ADD command", "paylod", vCommand)
+			if err := b.resourceDeployer.Add(vCommand, client); err != nil {
+				b.logger.Error("bootstrap failed, executing ADD command failed", "reason", err)
+				client.Abort(err)
+				return err
+			}
 		case commands.Copy:
-			logger.Info("COPY command", "paylod", vCommand)
+			if err := b.resourceDeployer.Copy(vCommand, client); err != nil {
+				b.logger.Error("bootstrap failed, executing COPY command failed", "reason", err)
+				client.Abort(err)
+				return err
+			}
 		}
+
 	}
 
-	// TODO: this is where the command execution goes
+	client.Success()
 
-	return fmt.Errorf("not implemented")
+	return nil
+}
+
+func (b *defaultBootstrapper) WithCommandRunner(input CommandRunner) Bootstrapper {
+	b.commandRunner = input
+	return b
+}
+func (b *defaultBootstrapper) WithResourceDeployer(input ResourceDeployer) Bootstrapper {
+	b.resourceDeployer = input
+	return b
 }
 
 func getTLSConfig(bootstrapData *mmds.MMDSBootstrap) (*tls.Config, error) {

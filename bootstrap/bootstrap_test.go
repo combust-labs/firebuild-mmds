@@ -16,6 +16,10 @@ import (
 
 func TestBootstrap(t *testing.T) {
 
+	// TODO: manually construct rootfs.WorkContext
+	// TODO: start a test server
+	// TODO: get a client certificate for the same server
+	// TODO: execute a bootstrapper with a test command runner and resource deployer implementation
 	t.Fatal("not implemented")
 
 }
