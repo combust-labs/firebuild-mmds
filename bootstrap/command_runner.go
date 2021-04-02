@@ -50,11 +50,15 @@ func (n *noopCommandRunner) Execute(cmd commands.Run, grpcClient rootfs.ClientPr
 }
 
 type shellCommandRunner struct {
-	logger hclog.Logger
+	defaultUser commands.User
+	logger      hclog.Logger
 }
 
 func NewShellCommandRunner(logger hclog.Logger) CommandRunner {
-	return &shellCommandRunner{logger: logger}
+	return &shellCommandRunner{
+		defaultUser: commands.DefaultUser(),
+		logger:      logger,
+	}
 }
 
 func (n *shellCommandRunner) Execute(cmd commands.Run, grpcClient rootfs.ClientProvider) error {

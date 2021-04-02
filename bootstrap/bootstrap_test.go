@@ -1,6 +1,8 @@
 package bootstrap
 
 import (
+	"bytes"
+	"io"
 	"io/fs"
 	"io/ioutil"
 	"os"
@@ -12,17 +14,32 @@ import (
 	"github.com/combust-labs/firebuild-embedded-ca/ca"
 	"github.com/combust-labs/firebuild-mmds/mmds"
 	"github.com/combust-labs/firebuild-shared/build/commands"
+	"github.com/combust-labs/firebuild-shared/build/resources"
 	"github.com/combust-labs/firebuild-shared/build/rootfs"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestBootstrap(t *testing.T) {
+func TestSuccessfulBootstrapWithResources(t *testing.T) {
 
 	testServerAppName := "test-server-app"
 
 	logger := hclog.Default()
 	logger.SetLevel(hclog.Debug)
+
+	// use this directory as the workdir for ADD and COPY resources:
+	tempDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatal("expected temp dir, got error", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	etcTestFile1Contents := []byte("test-file1 contents")
+
+	mustPutTestResource(t, filepath.Join(tempDir, "etc/test-file1"), etcTestFile1Contents)
+	mustPutTestResource(t, filepath.Join(tempDir, "etc/directory/file1"), []byte("etc/directory/file1 contents"))
+	mustPutTestResource(t, filepath.Join(tempDir, "etc/directory/file2"), []byte("etc/directory/file2 contents"))
+	mustPutTestResource(t, filepath.Join(tempDir, "etc/directory/subdir/subdir-file1"), []byte("etc/directory/subdir/subdir-file1 contents"))
 
 	// recreate a work context manually:
 	buildCtx := &rootfs.WorkContext{
@@ -53,23 +70,43 @@ func TestBootstrap(t *testing.T) {
 				User:    commands.DefaultUser(),
 				Workdir: commands.DefaultWorkdir(),
 			},
-
-			/*
-				commands.Add{
-					OriginalCommand: "ADD etc/test-file1 /etc/test-file1",
-					Source:          "etc/test-file1",
-					Target:          "/etc/test-file1",
-					User:            commands.DefaultUser(),
-					Workdir:         commands.DefaultWorkdir(),
+			commands.Add{
+				OriginalCommand: "ADD etc/test-file1 /etc/test-file1",
+				OriginalSource:  "etc/test-file1",
+				Source:          "etc/test-file1",
+				Target:          "/etc/test-file1",
+				User:            commands.DefaultUser(),
+				Workdir:         commands.Workdir{Value: tempDir},
+			},
+			commands.Copy{
+				OriginalCommand: "COPY etc/directory /etc/directory",
+				OriginalSource:  "etc/directory",
+				Source:          "etc/directory",
+				Target:          "/etc/directory",
+				User:            commands.DefaultUser(),
+				Workdir:         commands.Workdir{Value: tempDir},
+			},
+		},
+		ResourcesResolved: rootfs.Resources{
+			"etc/test-file1": []resources.ResolvedResource{
+				resources.NewResolvedFileResourceWithPath(func() (io.ReadCloser, error) {
+					return io.NopCloser(bytes.NewReader(etcTestFile1Contents)), nil
 				},
-				commands.Copy{
-					OriginalCommand: "COPY etc/directory /etc/directory",
-					Source:          "etc/directory",
-					Target:          "/etc/directory",
-					User:            commands.DefaultUser(),
-					Workdir:         commands.DefaultWorkdir(),
-				},
-			*/
+					fs.FileMode(0755),
+					"etc/test-file1",
+					"/etc/test-file1",
+					commands.Workdir{Value: tempDir},
+					commands.DefaultUser(),
+					filepath.Join(tempDir, "etc/test-file1")),
+			},
+			"etc/directory": []resources.ResolvedResource{
+				resources.NewResolvedDirectoryResourceWithPath(fs.FileMode(0755),
+					filepath.Join(tempDir, "etc/directory"),
+					"etc/directory",
+					"/etc/directory",
+					commands.Workdir{Value: tempDir},
+					commands.DefaultUser()),
+			},
 		},
 	}
 
@@ -119,7 +156,8 @@ func TestBootstrap(t *testing.T) {
 	}
 
 	bootstrapper := NewDefaultBoostrapper(logger.Named("bootstrapper"), bootstrapConfig).
-		WithCommandRunner(NewShellCommandRunner(logger.Named("shell-runner")))
+		WithCommandRunner(NewShellCommandRunner(logger.Named("shell-runner"))).
+		WithResourceDeployer(NewExecutingResourceDeployer(logger.Named("executing-deployer")))
 	if err := bootstrapper.Execute(); err != nil {
 		t.Fatal("bootstrapper failed", err)
 	}
