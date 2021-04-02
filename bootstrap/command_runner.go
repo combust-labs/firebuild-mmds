@@ -115,7 +115,7 @@ func (n *shellCommandRunner) Execute(cmd commands.Run, grpcClient rootfs.ClientP
 		return err
 	}
 
-	if err := shellCmd.Wait(); err == nil {
+	if err := shellCmd.Wait(); err != nil {
 		if exiterr, ok := err.(*exec.ExitError); ok {
 
 			// The program has exited with an exit code != 0
@@ -126,10 +126,8 @@ func (n *shellCommandRunner) Execute(cmd commands.Run, grpcClient rootfs.ClientP
 			n.logger.Error("command finished with error", "reason", exiterr)
 			return errors.Wrapf(exiterr, "command exited with code: %d, message %q", exiterr.ExitCode(), exiterr.String())
 		} else {
-			if err != nil {
-				n.logger.Error("wait returned a non exec.ExitError error", "reason", err)
-				return err
-			}
+			n.logger.Error("wait returned a non exec.ExitError error", "reason", err)
+			return err
 		}
 	}
 
