@@ -38,11 +38,11 @@ type MMDSData struct {
 }
 
 type MMDSBootstrap struct {
-	BootstrapHostPort string
-	CaChain           string
-	Certificate       string
-	PrivateKey        string
-	ServerName        string
+	HostPort    string `json:"host-port" mapstructure:"host-port"`
+	CaChain     string `json:"ca-chain" mapstructure:"ca-chain"`
+	Certificate string `json:"cert" mapstructure:"cert"`
+	Key         string `json:"key" mapstructure:"key"`
+	ServerName  string `json:"server-name" mapstructure:"server-name"`
 }
 
 type MMDSDrive struct {
