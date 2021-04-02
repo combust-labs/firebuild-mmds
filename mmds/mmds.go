@@ -25,6 +25,7 @@ type MMDSLatestMetadata struct {
 }
 
 type MMDSData struct {
+	Bootstrap      *MMDSBootstrap        `json:"bootstrap,omitempty" mapstructure:"bootstrap,omitempty"`
 	VMMID          string                `json:"vmm-id" mapstructure:"vmm-id"`
 	Drives         map[string]*MMDSDrive `json:"drives" mapstructure:"drives"`
 	EntrypointJSON string                `json:"entrypoint-json" mapstructure:"entrypoint-json"`
@@ -34,6 +35,14 @@ type MMDSData struct {
 	Network        *MMDSNetwork          `json:"network" mapstructure:"network"`
 	ImageTag       string                `json:"image-tag" mapstructure:"image-tag"`
 	Users          map[string]*MMDSUser  `json:"users" mapstructure:"users"`
+}
+
+type MMDSBootstrap struct {
+	HostPort    string `json:"host-port" mapstructure:"host-port"`
+	CaChain     string `json:"ca-chain" mapstructure:"ca-chain"`
+	Certificate string `json:"cert" mapstructure:"cert"`
+	Key         string `json:"key" mapstructure:"key"`
+	ServerName  string `json:"server-name" mapstructure:"server-name"`
 }
 
 type MMDSDrive struct {
