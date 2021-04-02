@@ -101,8 +101,10 @@ func processCommand() int {
 
 	if mmdsData.Bootstrap != nil {
 		// server is in the bootstrap mode:
-		bootstrapper := bootstrap.NewDefaultBoostrapper(rootLogger.Named("bootstrap"), mmdsData.Bootstrap)
-		// TODO: needs properly executing command runner and resource deployer
+		bootstrapper := bootstrap.
+			NewDefaultBoostrapper(rootLogger.Named("bootstrap"), mmdsData.Bootstrap).
+			WithCommandRunner(bootstrap.NewShellCommandRunner(rootLogger.Named("shell-runner")))
+		// TODO: needs properly executing resource deployer
 		if err := bootstrapper.Execute(); err != nil {
 			rootLogger.Error("bootstrap failed", "reason", err)
 			return 2
