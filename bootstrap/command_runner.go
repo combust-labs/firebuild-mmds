@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -90,7 +91,7 @@ func (n *shellCommandRunner) Execute(cmd commands.Run, grpcClient rootfs.ClientP
 	shellCmd := exec.Command(cmdargs[0], cmdargs[1:]...)
 	shellCmd.Dir = cmd.Workdir.Value
 	shellCmd.Env = func() []string {
-		result := []string{}
+		result := os.Environ()
 		for k, v := range cmdEnv.Snapshot() {
 			result = append(result, fmt.Sprintf("%s=%s", k, v))
 		}
