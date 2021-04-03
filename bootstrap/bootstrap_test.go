@@ -109,7 +109,7 @@ func TestFailingRunCommandBootstrap(t *testing.T) {
 
 	<-testServer.FinishedNotify()
 
-	serverOutput := testServer.ConsumedStdout()
+	serverOutput := testServer.ReceivedStdout()
 	assert.Equal(t, serverOutput, []string{
 		"echo value; apkArch=\"$(apk --print-arch)\" && case \"${apkArch}\"\n",
 	})
@@ -223,7 +223,7 @@ func TestFailingAddBootstrap(t *testing.T) {
 
 	<-testServer.FinishedNotify()
 
-	serverOutput := testServer.ConsumedStdout()
+	serverOutput := testServer.ReceivedStdout()
 	assert.Equal(t, serverOutput, []string{
 		"apt-get update && apt-get install ca-certificates && mkdir -p /home/test-user/test\n",
 		"echo value; apkArch=\"$(apk --print-arch)\" && case \"${apkArch}\"\n",
@@ -338,7 +338,7 @@ func TestFailingCopyBootstrap(t *testing.T) {
 
 	<-testServer.FinishedNotify()
 
-	serverOutput := testServer.ConsumedStdout()
+	serverOutput := testServer.ReceivedStdout()
 	assert.Equal(t, serverOutput, []string{
 		"apt-get update && apt-get install ca-certificates && mkdir -p /home/test-user/test\n",
 		"echo value; apkArch=\"$(apk --print-arch)\" && case \"${apkArch}\"\n",
@@ -489,7 +489,7 @@ func TestSuccessfulBootstrapWithResources(t *testing.T) {
 
 	<-testServer.FinishedNotify()
 
-	serverOutput := testServer.ConsumedStdout()
+	serverOutput := testServer.ReceivedStdout()
 	assert.Equal(t, serverOutput, []string{
 		"apt-get update && apt-get install ca-certificates && mkdir -p /home/test-user/test\n",
 		"echo value; apkArch=\"$(apk --print-arch)\" && case \"${apkArch}\"\n",
