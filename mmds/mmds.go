@@ -4,8 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/mitchellh/mapstructure"
+)
+
+var (
+	defaultPingInterval = time.Second * 5
 )
 
 type MMDSLatest struct {
@@ -38,11 +43,20 @@ type MMDSData struct {
 }
 
 type MMDSBootstrap struct {
-	HostPort    string `json:"host-port" mapstructure:"host-port"`
-	CaChain     string `json:"ca-chain" mapstructure:"ca-chain"`
-	Certificate string `json:"cert" mapstructure:"cert"`
-	Key         string `json:"key" mapstructure:"key"`
-	ServerName  string `json:"server-name" mapstructure:"server-name"`
+	HostPort     string `json:"host-port" mapstructure:"host-port"`
+	CaChain      string `json:"ca-chain" mapstructure:"ca-chain"`
+	Certificate  string `json:"cert" mapstructure:"cert"`
+	Key          string `json:"key" mapstructure:"key"`
+	ServerName   string `json:"server-name" mapstructure:"server-name"`
+	PingInterval string `json:"ping-interval" mapstructure:"ping-interval"`
+}
+
+func (b *MMDSBootstrap) SafePingInterval() time.Duration {
+	duration, err := time.ParseDuration(b.PingInterval)
+	if err != nil {
+		return defaultPingInterval
+	}
+	return duration
 }
 
 type MMDSDrive struct {

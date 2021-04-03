@@ -58,7 +58,7 @@ func (b *defaultBootstrapper) Execute() error {
 
 	chanFinished := make(chan struct{}, 1)
 	go func() {
-		timer := time.NewTimer(time.Second * 5)
+		timer := time.NewTimer(b.bootstrapData.SafePingInterval())
 		for {
 			select {
 			case <-timer.C:
