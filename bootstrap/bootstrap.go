@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"time"
 
 	"github.com/combust-labs/firebuild-mmds/mmds"
 	"github.com/combust-labs/firebuild-shared/build/commands"
@@ -55,6 +56,26 @@ func (b *defaultBootstrapper) Execute() error {
 		return err
 	}
 
+	chanFinished := make(chan struct{}, 1)
+	go func() {
+		timer := time.NewTimer(time.Second * 5)
+		for {
+			select {
+			case <-timer.C:
+				b.logger.Debug("pinging server")
+				if err := client.Ping(); err != nil {
+					b.logger.Error("ping returned an error", "reason", err)
+					return
+				}
+				timer.Reset(time.Second * 5)
+			case <-chanFinished:
+				timer.Stop()
+				b.logger.Debug("ping stopped, program finished")
+				return
+			}
+		}
+	}()
+
 	if err := client.Commands(); err != nil {
 		b.logger.Error("failed fetching bootstrap commands over gRPC", "reason", err)
 		return err
@@ -71,18 +92,21 @@ func (b *defaultBootstrapper) Execute() error {
 		case commands.Run:
 			if err := b.commandRunner.Execute(vCommand, client); err != nil {
 				b.logger.Error("bootstrap failed, executing RUN command failed", "reason", err)
+				close(chanFinished)
 				client.Abort(err)
 				return err
 			}
 		case commands.Add:
 			if err := b.resourceDeployer.Add(vCommand, client); err != nil {
 				b.logger.Error("bootstrap failed, executing ADD command failed", "reason", err)
+				close(chanFinished)
 				client.Abort(err)
 				return err
 			}
 		case commands.Copy:
 			if err := b.resourceDeployer.Copy(vCommand, client); err != nil {
 				b.logger.Error("bootstrap failed, executing COPY command failed", "reason", err)
+				close(chanFinished)
 				client.Abort(err)
 				return err
 			}
@@ -90,9 +114,9 @@ func (b *defaultBootstrapper) Execute() error {
 
 	}
 
-	client.Success()
+	close(chanFinished)
 
-	return nil
+	return client.Success()
 }
 
 func (b *defaultBootstrapper) WithCommandRunner(input CommandRunner) Bootstrapper {
