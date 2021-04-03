@@ -82,9 +82,9 @@ func (n *executingResourceDeployer) deployResources(source string, grpcClient ro
 
 				nResourcesTransferred = nResourcesTransferred + 1
 
-				fullTargetResourcePath := filepath.Join(titem.TargetWorkdir().Value, titem.TargetPath())
-
 				if titem.IsDir() {
+
+					fullTargetResourcePath := filepath.Join(titem.TargetWorkdir().Value, titem.TargetPath())
 
 					// create a directory:
 					if err := os.MkdirAll(fullTargetResourcePath, titem.TargetMode()); err != nil {
@@ -118,22 +118,29 @@ func (n *executingResourceDeployer) deployResources(source string, grpcClient ro
 					continue
 				}
 
+				destination := filepath.Join(titem.TargetWorkdir().Value, titem.TargetPath())
+				targetFileName := filepath.Base(titem.SourcePath())
+				if filepath.Base(destination) != targetFileName {
+					// ensure that we always have a full target path:
+					destination = filepath.Join(destination, targetFileName)
+				}
+
 				resourceReader, err := titem.Contents()
 				if err != nil {
 					n.logger.Error("error while fetching resource reader",
 						"resource-path", titem.TargetPath(),
-						"on-disk-path", fullTargetResourcePath,
+						"on-disk-path", destination,
 						"reason", err)
 					return err
 				}
 				defer resourceReader.Close()
 
-				targetFile, err := os.OpenFile(fullTargetResourcePath, os.O_CREATE|os.O_RDWR, titem.TargetMode())
+				targetFile, err := os.OpenFile(destination, os.O_CREATE|os.O_RDWR, titem.TargetMode())
 
 				if err != nil {
 					n.logger.Error("error while creating target file",
 						"resource-path", titem.TargetPath(),
-						"on-disk-path", fullTargetResourcePath,
+						"on-disk-path", destination,
 						"reason", err)
 					return err
 				}
@@ -143,7 +150,7 @@ func (n *executingResourceDeployer) deployResources(source string, grpcClient ro
 					targetFile.Close()
 					n.logger.Error("error while writing target file",
 						"resource-path", titem.TargetPath(),
-						"on-disk-path", fullTargetResourcePath,
+						"on-disk-path", destination,
 						"reason", err)
 					return err
 				}
@@ -152,7 +159,7 @@ func (n *executingResourceDeployer) deployResources(source string, grpcClient ro
 
 				n.logger.Info("file written",
 					"resource-path", titem.TargetPath(),
-					"on-disk-path", fullTargetResourcePath,
+					"on-disk-path", destination,
 					"written-bytes", written)
 
 				// chown the file:
@@ -162,14 +169,14 @@ func (n *executingResourceDeployer) deployResources(source string, grpcClient ro
 					if err != nil {
 						n.logger.Error("error while chowning file",
 							"resource-path", titem.TargetPath(),
-							"on-disk-path", fullTargetResourcePath,
+							"on-disk-path", destination,
 							"reason", err)
 						return err
 					}
-					if err := os.Chown(fullTargetResourcePath, uid, gid); err != nil {
+					if err := os.Chown(destination, uid, gid); err != nil {
 						n.logger.Error("error while chowning file",
 							"resource-path", titem.TargetPath(),
-							"on-disk-path", fullTargetResourcePath,
+							"on-disk-path", destination,
 							"reason", err)
 						return err
 					}

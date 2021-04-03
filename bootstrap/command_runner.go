@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -83,20 +84,18 @@ func (n *shellCommandRunner) Execute(cmd commands.Run, grpcClient rootfs.ClientP
 		cmdEnv.Put(k, v)
 	}
 
+	environment, commandToExecute, cleanupFunc := constructExecutableCommand(n.logger, cmdEnv, cmd.Command)
+	defer cleanupFunc()
+
 	// TODO: https://github.com/combust-labs/firebuild/issues/2
 
 	cmdargs := cmd.Shell.Commands
-	cmdargs = append(cmdargs, cmdEnv.Expand(cmd.Command))
+	//cmdargs = append(cmdargs, fmt.Sprintf("'%s'", strings.ReplaceAll(envString+cmdEnv.Expand(cmd.Command), "'", "'\\''")))
+	cmdargs = append(cmdargs, commandToExecute)
 
 	shellCmd := exec.Command(cmdargs[0], cmdargs[1:]...)
 	shellCmd.Dir = cmd.Workdir.Value
-	shellCmd.Env = func() []string {
-		result := os.Environ()
-		for k, v := range cmdEnv.Snapshot() {
-			result = append(result, fmt.Sprintf("%s=%s", k, v))
-		}
-		return result
-	}()
+	shellCmd.Env = environment
 	shellCmd.Stderr = &shellCommandWriter{
 		writerFunc: func(p []byte) error {
 			n.logger.Trace("writing stderr", "data", string(p))
@@ -146,4 +145,60 @@ func (e *shellCommandWriter) Write(p []byte) (n int, err error) {
 		return 0, err
 	}
 	return len(p), nil
+}
+
+// returns environment, command to execute and a cleanup function
+func constructExecutableCommand(logger hclog.Logger, cmdEnv env.BuildEnv, inputCommand string) ([]string, string, func()) {
+	environment := os.Environ()
+	for k, v := range cmdEnv.Snapshot() {
+		environment = append(environment, fmt.Sprintf("%s=\"%s\"", k, v))
+	}
+	envFileContents := []string{}
+	for _, envItem := range environment {
+		envFileContents = append(envFileContents, fmt.Sprintf("export %s", envItem))
+	}
+
+	expandedCommand := cmdEnv.Expand(inputCommand)
+
+	tempFile, tempFileErr := ioutil.TempFile("", "")
+
+	if tempFileErr != nil {
+
+		// if we are not allowed to write to the file, try executing the command inline:
+		logger.Warn("failed creating temporary command file, passing command inline", "reason", tempFileErr)
+		return environment, strings.Join(envFileContents, "; ") + expandedCommand, func() {}
+
+	} else {
+
+		deferredFunc := func() {
+			fileNameToCleanup := tempFile.Name()
+			if err := tempFile.Close(); err != nil {
+				logger.Warn("failed closing command temporary file", "reason", err)
+			}
+			if err := os.Remove(fileNameToCleanup); err != nil {
+				logger.Warn("failed removing command temporary file", "reason", err)
+			}
+		}
+
+		// we have the file created but we need it executable:
+		if err := tempFile.Chmod(0777); err != nil {
+			// if we can't make it executable, we have to try executing the command inline:
+			logger.Debug("failed chmoding command file, passing command inline", "reason", err)
+			return environment, strings.Join(envFileContents, "; ") + expandedCommand, deferredFunc
+		}
+
+		// we preferably want to execute this content separated by new lines:
+		fileContent := strings.Join(append(envFileContents, expandedCommand), "\n")
+		if _, err := tempFile.WriteString(fileContent); err != nil {
+			// but if we couldn't write to the file, we have to try best effort with an inline command:
+			logger.Warn("failed writing temporary environment file, passing command inline", "reason", err)
+			return environment, strings.Join(envFileContents, "; ") + expandedCommand, deferredFunc
+		} else {
+			// we're good, we have written to file so we can use the file as our command:
+			logger.Debug("using executable file command", "script-file", tempFile.Name())
+			return environment, fmt.Sprintf(". %s; ", tempFile.Name()), deferredFunc
+		}
+
+	}
+
 }
