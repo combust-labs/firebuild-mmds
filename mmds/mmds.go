@@ -30,25 +30,25 @@ type MMDSLatestMetadata struct {
 }
 
 type MMDSData struct {
-	Bootstrap      *MMDSBootstrap        `json:"bootstrap,omitempty" mapstructure:"bootstrap,omitempty"`
-	VMMID          string                `json:"vmm-id" mapstructure:"vmm-id"`
-	Drives         map[string]*MMDSDrive `json:"drives" mapstructure:"drives"`
-	EntrypointJSON string                `json:"entrypoint-json" mapstructure:"entrypoint-json"`
-	Env            map[string]string     `json:"env" mapstructure:"env"`
-	LocalHostname  string                `json:"local-hostname" mapstructure:"local-hostname"`
-	Machine        *MMDSMachine          `json:"machine" mapstructure:"machine"`
-	Network        *MMDSNetwork          `json:"network" mapstructure:"network"`
-	ImageTag       string                `json:"image-tag" mapstructure:"image-tag"`
-	Users          map[string]*MMDSUser  `json:"users" mapstructure:"users"`
+	Bootstrap      *MMDSBootstrap        `json:"Bootstrap,omitempty" mapstructure:"Bootstrap,omitempty"`
+	VMMID          string                `json:"VMMID" mapstructure:"VMMID"`
+	Drives         map[string]*MMDSDrive `json:"Drives" mapstructure:"Drives"`
+	EntrypointJSON string                `json:"EntrypointJSON" mapstructure:"EntrypointJSON"`
+	Env            map[string]string     `json:"Env" mapstructure:"Env"`
+	LocalHostname  string                `json:"LocalHostname" mapstructure:"LocalHostname"`
+	Machine        *MMDSMachine          `json:"Machine" mapstructure:"Machine"`
+	Network        *MMDSNetwork          `json:"Network" mapstructure:"Network"`
+	ImageTag       string                `json:"ImageTag" mapstructure:"ImageTag"`
+	Users          map[string]*MMDSUser  `json:"Users" mapstructure:"Users"`
 }
 
 type MMDSBootstrap struct {
-	HostPort     string `json:"host-port" mapstructure:"host-port"`
-	CaChain      string `json:"ca-chain" mapstructure:"ca-chain"`
-	Certificate  string `json:"cert" mapstructure:"cert"`
-	Key          string `json:"key" mapstructure:"key"`
-	ServerName   string `json:"server-name" mapstructure:"server-name"`
-	PingInterval string `json:"ping-interval" mapstructure:"ping-interval"`
+	HostPort     string `json:"HostPort" mapstructure:"HostPort"`
+	CaChain      string `json:"CAChain" mapstructure:"CAChain"`
+	Certificate  string `json:"Cert" mapstructure:"Cert"`
+	Key          string `json:"Key" mapstructure:"Key"`
+	ServerName   string `json:"ServerName" mapstructure:"ServerName"`
+	PingInterval string `json:"PingInterval" mapstructure:"PingInterval"`
 }
 
 func (b *MMDSBootstrap) SafePingInterval() time.Duration {
@@ -60,50 +60,49 @@ func (b *MMDSBootstrap) SafePingInterval() time.Duration {
 }
 
 type MMDSDrive struct {
-	DriveID      string `json:"drive-id" mapstructure:"drive-id"`
-	IsReadOnly   string `json:"is-read-only" mapstructure:"is-read-only"`
-	IsRootDevice string `json:"is-root-device" mapstructure:"is-root-device"`
-	Partuuid     string `json:"partuuid" mapstructure:"partuuid"`
-	PathOnHost   string `json:"path-on-host" mapstructure:"path-on-host"`
+	DriveID      string `json:"DriveID" mapstructure:"DriveID"`
+	IsReadOnly   string `json:"IsReadOnly" mapstructure:"IsReadOnly"`
+	IsRootDevice string `json:"IsRootDevice" mapstructure:"IsRootDevice"`
+	Partuuid     string `json:"PartUUID" mapstructure:"PartUUID"`
+	PathOnHost   string `json:"PathOnHost" mapstructure:"PathOnHost"`
 }
 
 type MMDSNetwork struct {
-	CNINetworkName string                           `json:"cni-network-name" mapstructure:"cni-network-name"`
-	Interfaces     map[string]*MMDSNetworkInterface `json:"interfaces" mapstructure:"interfaces"`
-	SSHPort        string                           `json:"ssh-port" mapstructure:"ssh-port"`
+	CNINetworkName string                           `json:"CniNetworkName" mapstructure:"CniNetworkName"`
+	Interfaces     map[string]*MMDSNetworkInterface `json:"Interfaces" mapstructure:"Interfaces"`
 }
 
 type MMDSNetworkInterface struct {
-	HostDevName string `json:"host-dev-name" mapstructure:"host-dev-name"`
-	Gateway     string `json:"gateway" mapstructure:"gateway"`
-	IfName      string `json:"ifname" mapstructure:"ifname"`
-	IP          string `json:"ip" mapstructure:"ip"`
-	IPAddr      string `json:"ip-addr" mapstructure:"ip-addr"`
-	IPMask      string `json:"ip-mask" mapstructure:"ip-mask"`
-	IPNet       string `json:"ip-net" mapstructure:"ip-net"`
-	Nameservers string `json:"nameservers" mapstructure:"nameservers"`
+	HostDeviceName string `json:"HostDeviceName" mapstructure:"HostDeviceName"`
+	Gateway        string `json:"Gateway" mapstructure:"Gateway"`
+	IfName         string `json:"IfName" mapstructure:"IfName"`
+	IP             string `json:"IP" mapstructure:"IP"`
+	IPAddr         string `json:"IPAddr" mapstructure:"IPAddr"`
+	IPMask         string `json:"IPMask" mapstructure:"IPMask"`
+	IPNet          string `json:"IPNet" mapstructure:"IPNet"`
+	Nameservers    string `json:"NameServers" mapstructure:"NameServers"`
 }
 
 type MMDSUser struct {
-	SSHKeys string `json:"ssh-keys" mapstructure:"ssh-keys"`
+	SSHKeys string `json:"SSHKeys" mapstructure:"SSHKeys"`
 }
 
 type MMDSMachine struct {
-	CPU         string `json:"cpu" mapstructure:"cpu"`
-	CPUTemplate string `json:"cpu-template" mapstructure:"cpu-template"`
-	HTEnabled   string `json:"ht-enabled" mapstructure:"ht-enabled"`
-	KernelArgs  string `json:"kernel-args" mapstructure:"kernel-args"`
-	Mem         string `json:"mem" mapstructure:"mem"`
-	VMLinuxID   string `json:"vmlinux" mapstructure:"vmlinux"`
+	CPU         string `json:"CPU" mapstructure:"CPU"`
+	CPUTemplate string `json:"CPUTemplate" mapstructure:"CPUTemplate"`
+	HTEnabled   string `json:"HTEnabled" mapstructure:"HTEnabled"`
+	KernelArgs  string `json:"KernelArgs" mapstructure:"KernelArgs"`
+	Mem         string `json:"Mem" mapstructure:"Mem"`
+	VMLinuxID   string `json:"VMLinux" mapstructure:"VMLinux"`
 }
 
 type MMDSRootfsEntrypointInfo struct {
-	Cmd        []string          `json:"cmd" mapstructure:"cmd"`
-	Entrypoint []string          `json:"entrypoint" mapstructure:"entrypoint"`
-	Env        map[string]string `json:"env" mapstructure:"env"`
-	Shell      []string          `json:"shell" mapstructure:"shell"`
-	User       string            `json:"user" mapstructure:"user"`
-	Workdir    string            `json:"workdir" mapstructure:"workdir"`
+	Cmd        []string          `json:"Cmd" mapstructure:"Cmd"`
+	Entrypoint []string          `json:"EntryPoint" mapstructure:"EntryPoint"`
+	Env        map[string]string `json:"Env" mapstructure:"Env"`
+	Shell      []string          `json:"Shell" mapstructure:"Shell"`
+	User       string            `json:"User" mapstructure:"User"`
+	Workdir    string            `json:"Workdir" mapstructure:"Workdir"`
 }
 
 // NewMMDSRootfsEntrypointInfoFromJSON deserializes a JSON string to a *MMDSRootfsEntrypointInfo.
