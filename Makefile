@@ -1,6 +1,6 @@
 VERSION_FILE := .version
 VERSION      := $(shell cat ${VERSION_FILE})
-LATEST_RELEASE := $(shell git tag -l | tail -1)
+LATEST_RELEASE := $(shell git describe --tags `git rev-list --tags --max-count=1`)
 
 build-vminit:
 	GOOS=linux CGO_ENABLED=0 installsuffix=cgo go build -o ./vminit-linux-amd64-${VERSION} ./cmd/vminit/main.go
