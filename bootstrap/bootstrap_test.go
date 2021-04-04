@@ -353,12 +353,12 @@ func TestSuccessfulBootstrapWithResources(t *testing.T) {
 
 	etcTestFile1Contents := []byte("test-file1 contents")
 
-	mustPutTestResource(t, filepath.Join(tempDir, "etc/test-file1"), etcTestFile1Contents)
-	mustPutTestResource(t, filepath.Join(tempDir, "etc/directory/file1"), []byte("etc/directory/file1 contents"))
-	mustPutTestResource(t, filepath.Join(tempDir, "etc/directory/file2"), []byte("etc/directory/file2 contents"))
-	mustPutTestResource(t, filepath.Join(tempDir, "etc/directory/subdir/subdir-file1"), []byte("etc/directory/subdir/subdir-file1 contents"))
+	rootfs.MustPutTestResource(t, filepath.Join(tempDir, "etc/test-file1"), etcTestFile1Contents)
+	rootfs.MustPutTestResource(t, filepath.Join(tempDir, "etc/directory/file1"), []byte("etc/directory/file1 contents"))
+	rootfs.MustPutTestResource(t, filepath.Join(tempDir, "etc/directory/file2"), []byte("etc/directory/file2 contents"))
+	rootfs.MustPutTestResource(t, filepath.Join(tempDir, "etc/directory/subdir/subdir-file1"), []byte("etc/directory/subdir/subdir-file1 contents"))
 
-	mustPutTestResource(t, filepath.Join(tempDir, "relative-file"), []byte("etc/directory/subdir/relative-file contents"))
+	rootfs.MustPutTestResource(t, filepath.Join(tempDir, "relative-file"), []byte("etc/directory/subdir/relative-file contents"))
 
 	// recreate a work context manually:
 	buildCtx := &rootfs.WorkContext{
@@ -540,15 +540,6 @@ func TestGetTLSConfig(t *testing.T) {
 		t.Fatal("expected TLS config, got error", tlsConfigErr)
 	}
 
-}
-
-func mustPutTestResource(t *testing.T, path string, contents []byte) {
-	if err := os.MkdirAll(filepath.Dir(path), fs.ModePerm); err != nil {
-		t.Fatal("failed creating parent directory for the resource, got error", err)
-	}
-	if err := ioutil.WriteFile(path, contents, fs.ModePerm); err != nil {
-		t.Fatal("expected resource to be written, got error", err)
-	}
 }
 
 const testDockerfileMultiStage = `FROM alpine:3.13 as builder

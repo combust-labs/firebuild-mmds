@@ -36,7 +36,7 @@ func NewDefaultBoostrapper(logger hclog.Logger, bootstrapData *mmds.MMDSBootstra
 	}
 }
 
-// DoBootstrap executes the bootstrap sequence on the machine.
+// Execute executes the bootstrap sequence on the machine.
 func (b *defaultBootstrapper) Execute() error {
 	clientTLSConfig, err := getTLSConfig(b.bootstrapData)
 	if err != nil {
@@ -47,7 +47,7 @@ func (b *defaultBootstrapper) Execute() error {
 	clientConfig := &rootfs.GRPCClientConfig{
 		HostPort:       b.bootstrapData.HostPort,
 		TLSConfig:      clientTLSConfig,
-		MaxRecvMsgSize: rootfs.DefaultMaxRecvMsgSize,
+		MaxRecvMsgSize: rootfs.DefaultMaxMsgSize, // TODO: this setting should be in the future configurable via MMDS settings
 	}
 
 	client, err := rootfs.NewClient(b.logger.Named("grpc-client"), clientConfig)
