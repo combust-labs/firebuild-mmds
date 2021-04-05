@@ -125,6 +125,15 @@ func (n *executingResourceDeployer) deployResources(source string, grpcClient ro
 					destination = filepath.Join(destination, targetFileName)
 				}
 
+				// make sure we have the parent directory
+				// this is the default Docker behavior, it creates intermediate directories for ADD / COPY commands
+				if err := os.MkdirAll(filepath.Dir(destination), 0755); err != nil {
+					n.logger.Error("error while ensuring resource parent directory",
+						"resource-path", destination,
+						"reason", err)
+					return err
+				}
+
 				resourceReader, err := titem.Contents()
 				if err != nil {
 					n.logger.Error("error while fetching resource reader",
